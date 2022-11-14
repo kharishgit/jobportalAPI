@@ -26,7 +26,7 @@ class User(AbstractUser):
     is_employee = models.BooleanField(default=False,null=True,blank=True)
     is_superadmin = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
-
+    time_period = models.IntegerField(default=3,null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name','phone_number']
@@ -56,10 +56,10 @@ class UserProfile(models.Model):
 
 
 
-@receiver(post_save, sender=User)
-def save_profile(sender, instance, created, **kwargs):
-    user = instance
-
-    if created:
-        profile = UserProfile(user=user)
-        profile.save()
+# @receiver(post_save, sender=User)
+# def save_profile(sender, instance, created, **kwargs):
+#     user = instance
+#
+#     if created:
+#         profile = UserProfile(user=user)
+#         profile.save()

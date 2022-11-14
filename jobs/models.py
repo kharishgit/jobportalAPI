@@ -77,7 +77,7 @@ class jobs(models.Model):
     last_date = models.DateTimeField(default=return_date_time)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,blank=True)
     created_At = models.DateTimeField(auto_now_add=True)
-
+    time_period = models.IntegerField(default=3,null=True, blank=True)
     def save(self, *args, **kwargs):
         g=geocoder.mapquest(self.address,key=os.environ.get('GEO_CODER_API'))
         print(g)

@@ -10,77 +10,140 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model
 import jwt
 from account.utils import Util
-from .serializers import EmailVerificationSerializer, UserSerializer,SignupSerializer
+from .serializers import EmailVerificationSerializer, UserSerializer,SignupSerializer,LoginSerializer,RegisterSerializer
 from django.contrib.auth.models import User
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from account.helpers import send_otp_to_phone
 from account.models import UserProfile
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.urls import reverse
-from rest_framework import views
+from rest_framework import views,generics
 from account.validators import validate_file_extension
 
 
 
-@api_view(['POST'])
-def register(request):
-    data = request.data
-    User = get_user_model()
-    user = SignupSerializer(data=data)
-    if user.is_valid():
-        if not User.objects.filter(username=data['email']).exists():
-            user = User.objects.create(
-                first_name = data['first_name'],
-                last_name = data['last_name'],
-                username = data['email'],
-                email = data['email'],
-                phone_number =data['phone_number'],
-                education = data['education'],
-                experience = data['experience'],
-                skill = data['skill'],
-                role = data['role'],
-                password = make_password(data['password']),
-                is_employer=data['is_employer'],
-                is_employee=data['is_employee'],
-                is_active = False
+# @api_view(['POST'])
+# def register(request):
+#     data = request.data
+#     User = get_user_model()
+#     user = SignupSerializer(data=data)
+#     if user.is_valid():
+#         if not User.objects.filter(username=data['email']).exists():
+#             user = User.objects.create(
+#                 first_name = data['first_name'],
+#                 last_name = data['last_name'],
+#                 username = data['email'],
+#                 email = data['email'],
+#                 phone_number =data['phone_number'],
+#                 education = data['education'],
+#                 experience = data['experience'],
+#                 skill = data['skill'],
+#                 role = data['role'],
+#                 password = make_password(data['password']),
+#                 is_employer=data['is_employer'],
+#                 is_employee=data['is_employee'],
+#
+#             )
+#             return Response(
+#                 {'message':'User Registered'},
+#                 status=status.HTTP_200_OK
+#             )
+#         else:
+#             return Response(
+#                 {'error':'User Already Exists'},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+#     else:
+#         return Response(user.errors)
+#         # return HttpResponse('Hii')
+class RegisterView(generics.GenericAPIView):
 
-            )
-            # User.objects.filter(id=id).update(is_employee=True)
+    serializer_class = RegisterSerializer
+    # renderer_classes = (UserRenderer,)
 
-            print(user.is_active)
-            #Code for Email Auth Starts
+    def post(self, request):
+        user = request.data
+        serializer = self.serializer_class(data=user)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        user_data = serializer.data
+        User = get_user_model()
+        user = User.objects.get(email=user_data['email'])
+        token = RefreshToken.for_user(user).access_token
+        current_site = get_current_site(request).domain
+        relativeLink = reverse('email-verify')
+        absurl = 'http://'+current_site+relativeLink+"?token="+str(token)
+        email_body = 'Hi '+user.username + \
+            ' Use the link below to verify your email \n' + absurl
+        data = {'email_body': email_body, 'to_email': user.email,
+                'email_subject': 'Verify your email'}
 
-            # serializer = SignupSerializer(data=data)
-            # serializer.is_valid(raise_exception=True)
-            # serializer.save()
-            # print(serializer)
-            #
-            # user_data = serializer.data
-            # print(user_data)
-            user = User.objects.get(email=data['email'])
-            print(user.id)
-            id=user.id
-            # User.objects.filter(id=id).update(is_verified=True)
+        Util.send_email(data)
+        return Response(user_data, status=status.HTTP_201_CREATED)
 
-            token = RefreshToken.for_user(user).access_token
-            current_site = get_current_site(request).domain
-            relativeLink = reverse('email-verify')
-            absurl = 'http://' + current_site + relativeLink + "?token=" + str(token)
-            email_body = 'Hi ' + user.first_name + \
-                         ' Use the link below to verify your email \n' + absurl
-            data = {'email_body': email_body, 'to_email': user.email,
-                    'email_subject': 'Verify your email'}
 
-            Util.send_email(data)
-            return Response(data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(
-                {'error':'User Already Exists'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    else:
-        return Response(user.errors)
-        # return HttpResponse('Hii')
+
+
+
+# @api_view(['POST'])
+# def register(request):
+#     data = request.data
+#     User = get_user_model()
+#     user = SignupSerializer(data=data)
+#     if user.is_valid():
+#         if not User.objects.filter(username=data['email']).exists():
+#             user = User.objects.create(
+#                 first_name = data['first_name'],
+#                 last_name = data['last_name'],
+#                 username = data['email'],
+#                 email = data['email'],
+#                 phone_number =data['phone_number'],
+#                 education = data['education'],
+#                 experience = data['experience'],
+#                 skill = data['skill'],
+#                 role = data['role'],
+#                 password = make_password(data['password']),
+#                 is_employer=data['is_employer'],
+#                 is_employee=data['is_employee'],
+#                 is_active = False
+
+#             )
+#             # User.objects.filter(id=id).update(is_employee=True)
+
+#             print(user.is_active)
+#             #Code for Email Auth Starts
+
+#             # serializer = SignupSerializer(data=data)
+#             # serializer.is_valid(raise_exception=True)
+#             # serializer.save()
+#             # print(serializer)
+#             #
+#             # user_data = serializer.data
+#             # print(user_data)
+#             user = User.objects.get(email=data['email'])
+#             print(user.id)
+#             id=user.id
+#             # User.objects.filter(id=id).update(is_verified=True)
+
+#             token = RefreshToken.for_user(user).access_token
+#             current_site = get_current_site(request).domain
+#             relativeLink = reverse('email-verify')
+#             absurl = 'http://' + current_site + relativeLink + "?token=" + str(token)
+#             email_body = 'Hi ' + user.first_name + \
+#                          ' Use the link below to verify your email \n' + absurl
+#             data = {'email_body': email_body, 'to_email': user.email,
+#                     'email_subject': 'Verify your email'}
+
+#             Util.send_email(data)
+#             return Response(data, status=status.HTTP_201_CREATED)
+#         else:
+#             return Response(
+#                 {'error':'User Already Exists'},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+#     else:
+#         return Response(user.errors)
+#         # return HttpResponse('Hii')
 
 
 @api_view(['GET'])
@@ -233,6 +296,37 @@ def verify_otp(request):
 #----------------------OTP CONFIG ENDS------------------------
 
 #----------------------EMAIL VERIFICATION------------------------
+class RegisterView(generics.GenericAPIView):
+
+    serializer_class = RegisterSerializer
+    # renderer_classes = (UserRenderer,)
+
+    def post(self, request):
+        user = request.data
+        serializer = self.serializer_class(data=user)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        user_data = serializer.data
+        User = get_user_model()
+        user = User.objects.get(email=user_data['email'])
+        token = RefreshToken.for_user(user).access_token
+        current_site = get_current_site(request).domain
+        relativeLink = reverse('email-verify')
+        absurl = 'http://'+current_site+relativeLink+"?token="+str(token)
+        email_body = 'Hi '+user.username + \
+            ' Use the link below to verify your email \n' + absurl
+        data = {'email_body': email_body, 'to_email': user.email,
+                'email_subject': 'Verify your email'}
+
+        Util.send_email(data)
+        return Response(user_data, status=status.HTTP_201_CREATED)
+
+
+
+
+
+
+
 class VerifyEmail(views.APIView):
     serializer_class = EmailVerificationSerializer
 
@@ -289,3 +383,14 @@ def uploadResume(request):
     user.userprofile.save()
 
     return Response(serializer.data)
+
+
+#---------------LOGIN XTRA ----------------------
+class LoginAPIView(generics.GenericAPIView):
+    serializer_class = LoginSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+

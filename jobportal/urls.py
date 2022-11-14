@@ -22,5 +22,7 @@ urlpatterns = [
     path('jobs/',include('jobs.api.urls')),
     path('account/',include('account.api.urls')),
     path('account/token/',TokenObtainPairView.as_view()),
-    
+    path('payments/', include('payments.urls')),
+    path('company/',include('company.urls'))
+
 ]

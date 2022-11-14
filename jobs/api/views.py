@@ -1,6 +1,8 @@
 from re import T
 import re
 from turtle import title
+
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
@@ -97,8 +99,35 @@ def job_stat(request,topic):
 @permission_classes([IsAuthenticated])
 def apply_job(request,pk):
     user = request.user
+    print(user)
+    print(user.is_employee)
+    chk = CandidatesApplied.objects.all().values()
+    print(chk)
 
-    # chk=UserProfile.objects.get(is_verified)
+    # userprofile= CandidatesApplied.objects.filter(user__username=user).exists()
+    # print(userprofile)
+    # if not userprofile:
+    #     return Response({ 'error': 'Upload Your resume First' }, status=status.HTTP_400_BAD_REQUEST)
+    #
+
+
+    dat=jobs.objects.filter(pk=pk).values()
+    # print(dat)
+    for i in dat:
+        employer_id = i['user_id']
+    print(employer_id,"Employer Id")
+    cnt=CandidatesApplied.objects.filter(jobs__user=employer_id).count()
+    print(cnt,"Jobs")
+
+    User=get_user_model()
+    data = User.objects.filter(pk=employer_id).values()
+    for time_period in data:
+        tim = time_period['time_period']
+    print(tim,"Time period for the employer")
+    if (tim==3 and cnt == 1 or tim == 6 and cnt == 2):
+        return Response({ 'error': 'This Employer cannot receive any more Applicants' }, status=status.HTTP_400_BAD_REQUEST)
+
+
    
     if request.user.is_employee !=True:
         return Response({ 'error': 'You are not allowed to apply for Jobs' }, status=status.HTTP_400_BAD_REQUEST)
@@ -229,8 +258,11 @@ def job_suggestion(request):
     var =skill.split()
     # skill='Flutter'
     print(skill)
+    edu = request.user.education
 
-    args = jobs.objects.filter(title__icontains=var[0])
+    # args = jobs.objects.filter(title__icontains=var[0])
+    args = jobs.objects.filter(title__icontains=var[0]).filter(education=edu)
+
     print({
         'user':request.user.skill,
     })
